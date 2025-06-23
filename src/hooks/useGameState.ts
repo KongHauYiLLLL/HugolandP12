@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect } from 'react';
 import { GameState, PlayerStats, Inventory, Enemy, Weapon, Armor, ChestReward, Research, Achievement, CollectionBook, KnowledgeStreak, GameMode, Statistics, PowerSkills } from '../types/game';
 import { generateWeapon, generateArmor, generateEnemy, generateMythicalWeapon, generateMythicalArmor, calculateResearchBonus, calculateResearchCost } from '../utils/gameUtils';
 import { checkAchievements, initializeAchievements } from '../utils/achievements';
-import { useAuth } from './useAuth';
 import { useQuestions } from './useQuestions';
 import AsyncStorage from '../utils/storage';
 
@@ -113,7 +112,6 @@ const initialGameState: GameState = {
 };
 
 export const useGameState = () => {
-  const { user, profile, updateProfile } = useAuth();
   const { getQuestionByZone, recordAnswer } = useQuestions();
   const [gameState, setGameState] = useState<GameState>(initialGameState);
   const [isLoading, setIsLoading] = useState(true);
@@ -180,28 +178,6 @@ export const useGameState = () => {
     loadGameState();
   }, []);
 
-  // Sync with profile when available
-  useEffect(() => {
-    if (profile && !isLoading) {
-      setGameState(prev => ({
-        ...prev,
-        coins: profile.coins,
-        gems: profile.gems,
-        zone: profile.zone,
-        research: {
-          level: profile.research_level,
-          tier: profile.research_tier,
-          totalSpent: prev.research.totalSpent,
-        },
-        gameMode: {
-          ...prev.gameMode,
-          current: profile.game_mode as any,
-        },
-        isPremium: profile.is_premium,
-      }));
-    }
-  }, [profile, isLoading]);
-
   // Save game state to storage whenever it changes
   useEffect(() => {
     if (!isLoading) {
@@ -222,34 +198,6 @@ export const useGameState = () => {
       saveGameState();
     }
   }, [gameState, isLoading]);
-
-  // Sync important data to Supabase profile
-  useEffect(() => {
-    if (user && profile && !isLoading) {
-      const syncToProfile = async () => {
-        try {
-          await updateProfile({
-            zone: gameState.zone,
-            coins: gameState.coins,
-            gems: gameState.gems,
-            research_level: gameState.research.level,
-            research_tier: gameState.research.tier,
-            game_mode: gameState.gameMode.current,
-            is_premium: gameState.isPremium,
-            best_streak: gameState.knowledgeStreak.best,
-            highest_zone: Math.max(profile.highest_zone, gameState.zone),
-            total_items_collected: gameState.collectionBook.totalWeaponsFound + gameState.collectionBook.totalArmorFound,
-          });
-        } catch (error) {
-          console.error('Error syncing to profile:', error);
-        }
-      };
-
-      // Debounce the sync to avoid too many updates
-      const timeoutId = setTimeout(syncToProfile, 2000);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [gameState.zone, gameState.coins, gameState.gems, gameState.research.level, gameState.isPremium, user, profile, updateProfile, isLoading]);
 
   const triggerVisualEffect = useCallback((type: 'text' | 'particles' | 'shake', data?: any) => {
     switch (type) {
@@ -703,7 +651,7 @@ export const useGameState = () => {
       if (!prev.currentEnemy || !prev.inCombat || !currentQuestion) return prev;
 
       // Record answer analytics
-      if (user && answerGiven !== undefined) {
+      if (answerGiven !== undefined) {
         const responseTime = Date.now() - questionStartTime;
         recordAnswer(
           currentQuestion.question_id,
@@ -910,7 +858,7 @@ export const useGameState = () => {
 
     // Check achievements after combat
     setTimeout(checkAndUnlockAchievements, 100);
-  }, [currentQuestion, questionStartTime, user, recordAnswer, updateStatistics, updateKnowledgeStreak, triggerVisualEffect, checkAndUnlockAchievements, getQuestionByZone]);
+  }, [currentQuestion, questionStartTime, recordAnswer, updateStatistics, updateKnowledgeStreak, triggerVisualEffect, checkAndUnlockAchievements, getQuestionByZone]);
 
   const resetGame = useCallback(async () => {
     try {

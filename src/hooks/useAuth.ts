@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react';
-import { User } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
 
 export interface UserProfile {
   id: string;
@@ -26,144 +24,55 @@ export interface UserProfile {
 }
 
 export const useAuth = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        loadProfile(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await loadProfile(session.user.id);
-        } else {
-          setProfile(null);
-          setLoading(false);
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const loadProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
-
-      setProfile(data);
-    } catch (err) {
-      console.error('Error loading profile:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load profile');
-    } finally {
-      setLoading(false);
-    }
+  // Mock user and profile for offline mode
+  const mockUser = {
+    id: 'offline-user',
+    email: 'offline@hugoland.com'
   };
 
-  const signUp = async (email: string, password: string, username: string) => {
-    try {
-      setError(null);
-      setLoading(true);
-
-      // Check if username is already taken
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('username', username)
-        .single();
-
-      if (existingProfile) {
-        throw new Error('Username is already taken');
-      }
-
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
-      if (data.user) {
-        // Create profile
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            user_id: data.user.id,
-            username,
-            email,
-          });
-
-        if (profileError) throw profileError;
-      }
-
-      return { data, error: null };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Sign up failed';
-      setError(errorMessage);
-      return { data: null, error: errorMessage };
-    } finally {
-      setLoading(false);
-    }
+  const mockProfile: UserProfile = {
+    id: 'offline-profile',
+    user_id: 'offline-user',
+    username: 'Adventurer',
+    email: 'offline@hugoland.com',
+    zone: 1,
+    coins: 100,
+    gems: 0,
+    research_level: 0,
+    research_tier: 0,
+    game_mode: 'normal',
+    is_premium: false,
+    chat_enabled: false,
+    is_banned: false,
+    best_streak: 0,
+    highest_zone: 1,
+    total_items_collected: 0,
+    total_questions_answered: 0,
+    total_correct_answers: 0,
+    best_blitz_score: 0,
+    category_stats: {}
   };
 
-  const signIn = async (email: string, password: string) => {
-    try {
-      setError(null);
-      setLoading(true);
-
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
-      return { data, error: null };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Sign in failed';
-      setError(errorMessage);
-      return { data: null, error: errorMessage };
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [user] = useState(mockUser);
+  const [profile, setProfile] = useState<UserProfile>(mockProfile);
+  const [loading] = useState(false);
+  const [error] = useState<string | null>(null);
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
-    if (!user) return;
+    // Update local profile state
+    setProfile(prev => ({ ...prev, ...updates }));
+  };
 
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('user_id', user.id);
+  const signUp = async () => {
+    return { data: mockUser, error: null };
+  };
 
-      if (error) throw error;
+  const signIn = async () => {
+    return { data: mockUser, error: null };
+  };
 
-      // Update local profile state
-      setProfile(prev => prev ? { ...prev, ...updates } : null);
-    } catch (err) {
-      console.error('Error updating profile:', err);
-      setError(err instanceof Error ? err.message : 'Failed to update profile');
-    }
+  const setError = () => {
+    // No-op for offline mode
   };
 
   return {

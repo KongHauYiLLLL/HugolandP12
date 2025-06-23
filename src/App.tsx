@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from './hooks/useAuth';
 import { useGameState } from './hooks/useGameState';
-import { Auth } from './components/Auth';
 import { Combat } from './components/Combat';
 import { Shop } from './components/Shop';
 import { Inventory } from './components/Inventory';
@@ -24,7 +22,6 @@ type GameView = 'stats' | 'shop' | 'inventory' | 'research';
 type ModalView = 'achievements' | 'collection' | 'statistics' | 'gameMode' | 'pokyegMarket' | 'tutorial' | 'cheats' | 'chat' | 'leaderboards' | 'gifts' | null;
 
 function App() {
-  const { user, profile, loading: authLoading } = useAuth();
   const {
     gameState,
     isLoading,
@@ -50,11 +47,6 @@ function App() {
 
   const [currentView, setCurrentView] = useState<GameView>('stats');
   const [currentModal, setCurrentModal] = useState<ModalView>(null);
-
-  // Show auth screen if not authenticated
-  if (authLoading || !user || !profile) {
-    return <Auth />;
-  }
 
   if (isLoading) {
     return (
@@ -312,7 +304,7 @@ function App() {
           {/* User Info */}
           <div className="text-center mb-4">
             <p className="text-purple-300 text-sm">
-              Welcome back, <span className="font-bold text-white">{profile.username}</span>!
+              Welcome back, <span className="font-bold text-white">Adventurer</span>!
             </p>
           </div>
           
